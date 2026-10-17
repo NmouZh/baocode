@@ -193,6 +193,133 @@ void main() {
     });
   });
 
+  group('detectTerminalProfiles with WSL distributions', () {
+    const environment = {
+      'Path': r'C:\Windows\System32;C:\Windows',
+      'PATHEXT': '.COM;.EXE;.BAT;.CMD',
+      'windir': r'C:\Windows',
+    };
+    const wslExe = r'C:\Windows\System32\wsl.exe';
+
+    List<TerminalProfile> wsl({
+      List<String>? distros = const ['Ubuntu', 'Debian'],
+      String? path = wslExe,
+      Object? configured,
+    }) => detectTerminalProfiles(
+      TerminalOs.windows,
+      environment,
+      exists: {r'C:\Windows\System32\cmd.exe'}.contains,
+      list: (_) => const [],
+      configured: configured,
+      wslDistros: distros,
+      wslPath: path,
+    );
+
+    test('each distribution is a profile of its own, after the others', () {
+      expect(wsl(), const [
+        TerminalProfile(
+          name: 'Command Prompt',
+          path: r'C:\Windows\System32\cmd.exe',
+        ),
+        TerminalProfile(
+          name: 'Ubuntu (WSL)',
+          path: wslExe,
+          args: ['-d', 'Ubuntu'],
+        ),
+        TerminalProfile(
+          name: 'Debian (WSL)',
+          path: wslExe,
+          args: ['-d', 'Debian'],
+        ),
+      ]);
+    });
+
+    test("Docker Desktop's distributions are not the user's; one that "
+        'merely names Docker is', () {
+      final names = wsl(
+        distros: const [
+          'docker-desktop',
+          'docker-desktop-data',
+          'docker-dev',
+          'Ubuntu',
+        ],
+      ).map((profile) => profile.name);
+      expect(names, contains('docker-dev (WSL)'));
+      expect(names, isNot(contains('docker-desktop (WSL)')));
+      expect(names, isNot(contains('docker-desktop-data (WSL)')));
+    });
+
+    test("a distribution the user's profiles name is the user's", () {
+      // The profile they set is not found (no `nu` on the PATH), so the
+      // name is absent only because the distribution was left out.
+      final names = wsl(
+        configured: const {
+          'Ubuntu (WSL)': {'path': 'nu'},
+        },
+      ).map((profile) => profile.name);
+      expect(names, isNot(contains('Ubuntu (WSL)')));
+      expect(names, contains('Debian (WSL)'));
+    });
+
+    test('none without a distribution list, none without a wsl.exe path, '
+        'and none on another system', () {
+      expect(
+        wsl(distros: null).map((profile) => profile.name),
+        isNot(contains('Ubuntu (WSL)')),
+      );
+      expect(
+        wsl(path: null).map((profile) => profile.name),
+        isNot(contains('Ubuntu (WSL)')),
+      );
+      expect(
+        detectTerminalProfiles(
+          TerminalOs.linux,
+          const {'PATH': '/usr/bin'},
+          exists: (_) => false,
+          list: (_) => const [],
+          wslDistros: const ['Ubuntu'],
+          wslPath: wslExe,
+        ),
+        isEmpty,
+      );
+    });
+
+    test('where wsl.exe is, under the Windows directory the environment '
+        'names', () {
+      expect(windowsWslExePath(environment), wslExe);
+      expect(
+        windowsWslExePath(const {'SystemRoot': r'D:\Win'}),
+        r'D:\Win\System32\wsl.exe',
+      );
+      expect(windowsWslExePath(const {}), r'C:\Windows\System32\wsl.exe');
+    });
+  });
+
+  group('wslDistrosFromOutput', () {
+    /// [text] as `wsl.exe` writes it: UTF-16LE, each code unit's low byte
+    /// first.
+    List<int> utf16le(String text) => [
+      for (final unit in text.codeUnits) ...[unit & 0xFF, unit >> 8],
+    ];
+
+    test('the names, one per line, the empty ones dropped', () {
+      expect(wslDistrosFromOutput(utf16le('Ubuntu\r\nDebian\n\n  \n')), [
+        'Ubuntu',
+        'Debian',
+      ]);
+    });
+
+    test('a name outside ASCII survives the decode', () {
+      expect(wslDistrosFromOutput(utf16le('Ubuntu-中文\n')), ['Ubuntu-中文']);
+    });
+
+    test('nothing is no name', () {
+      expect(wslDistrosFromOutput(const []), isEmpty);
+      // Half a code unit is not one.
+      expect(wslDistrosFromOutput(const [0x41]), isEmpty);
+    });
+  });
+
   group('terminalDefaultProfileName', () {
     final profiles = mac();
     const zsh = (executable: '/bin/zsh', arguments: ['-l']);
