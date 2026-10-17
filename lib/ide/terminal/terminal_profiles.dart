@@ -15,10 +15,14 @@
 // src/vs/platform/terminal/common/terminalPlatformConfiguration.ts, and
 // src/vs/base/node/processes.ts (`findExecutable`).
 //
-// Deviations: no WSL distributions (listing them runs wsl.exe), no Cmder;
-// a profile's `env`, `icon`, `color` and `overrideName` are not read;
-// `${env:NAME}` is the only variable a path resolves; a Windows profile's
-// `args` given as one string are split at spaces.
+// Deviations: no Cmder; a Windows' WSL distributions are listed by the
+// platform layer and passed in ([wslDistros]) rather than run for here, the
+// build of Windows that gates them being read there too (upstream asks the
+// registry); a WSL profile's icon and its `isDefault` (the default profile
+// is a setting here) are not ported; a profile's `env`, `icon`, `color` and
+// `overrideName` are not read; `${env:NAME}` is the only variable a path
+// resolves; a Windows profile's `args` given as one string are split at
+// spaces.
 
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
@@ -111,6 +115,10 @@ enum _Source { powerShell, gitBash }
 /// `terminal.integrated.profiles.<os>`: a profile set to null is taken
 /// away), less those whose shell is not there. [exists] says whether a file
 /// is there, [list] the names in a folder.
+///
+/// A Windows' WSL distributions are [wslDistros], the names `wsl.exe -l -q`
+/// listed ([wslPath] where its `wsl.exe` is): a profile each, and last, as
+/// upstream appends them to the profiles it found rather than among them.
 List<TerminalProfile> detectTerminalProfiles(
   TerminalOs os,
   Map<String, String> environment, {
@@ -118,6 +126,8 @@ List<TerminalProfile> detectTerminalProfiles(
   required List<String> Function(String directory) list,
   String? etcShells,
   Object? configured,
+  List<String>? wslDistros,
+  String? wslPath,
 }) {
   String? env(String name) => switch (_lookUp(environment, name, os)) {
     final value? when value.isNotEmpty => value,
@@ -139,7 +149,7 @@ List<TerminalProfile> detectTerminalProfiles(
   );
 
   if (os == TerminalOs.windows) {
-    final windir = env('windir') ?? env('SystemRoot') ?? r'C:\Windows';
+    final windir = _windowsDirectory(environment);
     final system32 = '$windir\\System32';
     final homeDrive = env('HOMEDRIVE') ?? 'C:';
     profiles
@@ -228,6 +238,31 @@ List<TerminalProfile> detectTerminalProfiles(
       ),
     );
   }
+
+  // WSL distributions, a terminal of their own each: `docker-desktop` and
+  // `docker-desktop-data` are Docker Desktop's implementation detail, not
+  // the user's, and a distribution the user's profiles already name is
+  // theirs, not this one's (upstream's `hasOwnProperty` of the configured
+  // profiles). Upstream lists them apart from the detected ones and marks
+  // them so: in the New Terminal dropdown with the settings' profiles.
+  if (os == TerminalOs.windows && wslDistros != null && wslPath != null) {
+    final Iterable<Object?> configuredNames = configured is Map
+        ? configured.keys
+        : const [];
+    for (final distro in wslDistros) {
+      if (distro.startsWith('docker-desktop')) continue;
+      final name = '$distro (WSL)';
+      if (configuredNames.contains(name)) continue;
+      result.add(
+        TerminalProfile(
+          name: name,
+          path: wslPath,
+          args: ['-d', distro],
+          isAutoDetected: false,
+        ),
+      );
+    }
+  }
   return result;
 }
 
@@ -286,6 +321,42 @@ void _applyConfigured(
       isAutoDetected: false,
     );
   }
+}
+
+/// Where `wsl.exe` is: `System32\wsl.exe` under the Windows directory
+/// [environment] names, as upstream's `${system32Path}\wsl.exe`. Upstream
+/// asks for `Sysnative` there instead when it is a 32-bit process on 64-bit
+/// Windows; the app has no 32-bit build. Whether it is there is the
+/// caller's to ask, as a profile's shell is [exists]'.
+String windowsWslExePath(Map<String, String> environment) =>
+    '${_windowsDirectory(environment)}\\System32\\wsl.exe';
+
+/// The Windows directory [environment] names, for the paths within it.
+String _windowsDirectory(Map<String, String> environment) {
+  for (final name in const ['windir', 'SystemRoot']) {
+    final value = _lookUp(environment, name, TerminalOs.windows);
+    if (value != null && value.isNotEmpty) return value;
+  }
+  return r'C:\Windows';
+}
+
+/// The distributions in `wsl.exe -l -q`'s output [bytes], one per line, the
+/// empty ones dropped.
+///
+/// The output is UTF-16LE, each code unit's low byte first: upstream pins
+/// `WSL_UTF8=0` to read it so, since a user's environment may ask `wsl.exe`
+/// for another encoding
+/// (https://github.com/microsoft/vscode/issues/276253). `dart:convert` has
+/// no UTF-16 decoder, so the units are read here.
+List<String> wslDistrosFromOutput(List<int> bytes) {
+  final units = <int>[];
+  for (var i = 0; i + 1 < bytes.length; i += 2) {
+    units.add(bytes[i] | (bytes[i + 1] << 8));
+  }
+  return [
+    for (final line in String.fromCharCodes(units).split('\n'))
+      if (line.trim() case final name when name.isNotEmpty) name,
+  ];
 }
 
 /// Where Git for Windows' bash may be (`getGitBashPaths`, less the one

@@ -105,6 +105,19 @@ abstract final class PtyProcesses {
         shells = null;
       }
     }
+    // A WSL distribution is a profile of its own, listed by running
+    // `wsl.exe -l -q`: none on another system, none without a `wsl.exe`,
+    // and none on a Windows too old for the `-d` argument a profile starts
+    // one with.
+    List<String>? wslDistros;
+    String? wslPath;
+    if (os == TerminalOs.windows && _wslProfilesAllowed()) {
+      final exe = windowsWslExePath(base);
+      if (_exists(exe)) {
+        wslPath = exe;
+        wslDistros = await _listWslDistros(exe);
+      }
+    }
     return (
       profiles: detectTerminalProfiles(
         os,
@@ -113,10 +126,47 @@ abstract final class PtyProcesses {
         list: _list,
         etcShells: shells,
         configured: configured,
+        wslDistros: wslDistros,
+        wslPath: wslPath,
       ),
       systemShell: defaultTerminalShell(os, base, exists: _exists, list: _list),
     );
   }
+
+  /// The distributions `wsl.exe -l -q` lists, or null when it lists none:
+  /// no distribution, a failure, or nothing within the second it is given.
+  /// Nothing throws: what is being found feeds a dropdown.
+  static Future<List<String>?> _listWslDistros(String wslExe) async {
+    try {
+      final result = await Process.run(
+        wslExe,
+        const ['-l', '-q'],
+        // As upstream: `wsl.exe` writes UTF-16LE by default, and what the
+        // user's environment asks it for must not change how it is read.
+        environment: {...Platform.environment, 'WSL_UTF8': '0'},
+        stdoutEncoding: null,
+      ).timeout(const Duration(seconds: 1));
+      if (result.exitCode != 0) return null;
+      final stdout = result.stdout;
+      if (stdout is! List<int>) return null;
+      final distros = wslDistrosFromOutput(stdout);
+      return distros.isEmpty ? null : distros;
+    } on ProcessException {
+      return null;
+    } on TimeoutException {
+      return null;
+    }
+  }
+
+  /// Whether this Windows is new enough to start a distribution with the
+  /// `-d` argument a WSL profile passes (upstream's `allowWslDiscovery`:
+  /// build 19041, the May 2020 Update that added it). Without the argument
+  /// `wsl.exe` drops into its own default distribution instead, so a profile
+  /// that listed one anyway would start the wrong shell; a version string
+  /// no build number can be read from is no build number (the app's
+  /// `windowsBuildNumber`), which holds them back.
+  static bool _wslProfilesAllowed() =>
+      windowsBuildNumber(Platform.operatingSystemVersion) >= 19041;
 
   /// Hangs up every terminal this run started, and waits (up to [timeout]
   /// each) for its process to end: killed if it does not.

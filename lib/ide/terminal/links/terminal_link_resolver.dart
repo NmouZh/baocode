@@ -16,9 +16,12 @@
 // URI. [TerminalFileLinkResolver] is upstream's resolver on a stat function,
 // dart:io's by default (none on the web, where nothing resolves).
 //
-// Deviations: no remote terminals (`vscode-remote` URIs) and no WSL `/mnt/`
-// paths (upstream asks the backend's `wslpath`); `\\wsl$\` paths are left as
-// they are when the process's OS is Windows (upstream: when the app runs on
+// Deviations: no remote terminals (`vscode-remote` URIs); a WSL `/mnt/`
+// path is converted by [TerminalWslPath], which is upstream's `unix-to-win`
+// ask of the backend's `wslpath` (`win-to-unix`, which upstream asks of a
+// terminal started in a Windows directory, is not ported: `wsl.exe`
+// translates that directory itself); `\\wsl$\` paths are left as they are
+// when the process's OS is Windows (upstream: when the app runs on
 // Windows). The cache is keyed by the directory as well as the link (the
 // cwd can change), and expires 10 s after the last write by a clock instead
 // of a timer. A `file://` URI on macOS or Linux is its path, without
@@ -48,6 +51,17 @@ abstract interface class TerminalLinkResolver {
 
 /// Whether [path] is a folder (true), a file (false) or nothing (null).
 typedef TerminalLinkStat = Future<bool?> Function(String path);
+
+/// Where the WSL path [path] is on Windows (`/mnt/c/foo` → `C:\foo`), as
+/// upstream's `ITerminalBackend.getWslPath` asked `unix-to-win`: the backend
+/// runs `wslpath -w`. A path nothing can be asked about is that path as it
+/// is ([platform.wslPath] does that without a `wsl.exe`), which resolves
+/// nowhere.
+typedef TerminalWslPath = Future<String> Function(String path);
+
+/// A Windows file as WSL names it, the drive letter in either case
+/// (upstream's `/^\/mnt\/[a-z]/i`).
+final RegExp _wslMountPath = RegExp(r'^/mnt/[a-z]', caseSensitive: false);
 
 /// The operating system the app runs on (Linux on the web).
 OperatingSystem get hostOperatingSystem => platform.hostOperatingSystem;
@@ -126,15 +140,18 @@ Uri pathToFileUri(String path, OperatingSystem os) {
 
 /// Upstream's `TerminalLinkResolver`: strips the line and column suffix and
 /// the query, resolves `~` against [userHome] and relative paths against the
-/// cwd, and asks [stat] whether something is there.
+/// cwd, asks [TerminalWslPath] where a WSL path is on Windows, and asks
+/// [stat] whether something is there.
 class TerminalFileLinkResolver implements TerminalLinkResolver {
   TerminalFileLinkResolver({
     OperatingSystem? os,
     String? userHome,
     TerminalLinkStat? stat,
+    TerminalWslPath? wslPath,
   }) : os = os ?? platform.hostOperatingSystem,
        userHome = userHome ?? platform.hostUserHome,
-       _stat = stat ?? platform.statPath;
+       _stat = stat ?? platform.statPath,
+       _wslPath = wslPath ?? platform.wslPath;
 
   /// The path syntax of the links.
   final OperatingSystem os;
@@ -143,6 +160,7 @@ class TerminalFileLinkResolver implements TerminalLinkResolver {
   final String? userHome;
 
   final TerminalLinkStat _stat;
+  final TerminalWslPath _wslPath;
   final _LinkCache _cache = _LinkCache();
 
   @override
@@ -174,8 +192,16 @@ class TerminalFileLinkResolver implements TerminalLinkResolver {
       return null;
     }
 
+    // A `/mnt/` path is a Windows file as WSL names it: the backend converts
+    // it (`wslpath -w`), and what comes back is stat'd as it is — reading it
+    // as a Windows path would look for a drive named `mnt`. To upstream's
+    // check that the backend exists, this asks [TerminalWslPath], which
+    // answers with the path it was given when it cannot convert.
+    if (os == OperatingSystem.windows && _wslMountPath.hasMatch(link)) {
+      linkUrl = await _wslPath(linkUrl);
+    }
     // Skip preprocessing if it looks like a special Windows -> WSL link
-    if (os == OperatingSystem.windows &&
+    else if (os == OperatingSystem.windows &&
         RegExp(r'^(?:\/\/|\\\\)wsl(?:\$|\.localhost)(\/|\\)').hasMatch(link)) {
       // No-op, it's already the right format
     }

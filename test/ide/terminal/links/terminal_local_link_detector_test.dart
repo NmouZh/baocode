@@ -11,8 +11,8 @@
 //
 // Upstream runs the Windows suite only on Windows (its URIs' separators
 // follow the host); the port resolves paths by the process's OS, so the
-// suite runs everywhere. Its WSL `/mnt/` test is skipped: there is no WSL
-// backend.
+// suite runs everywhere. Its WSL `/mnt/` test runs too: the backend it asks
+// for `wslpath` is the tests' [fakeWslPath].
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:baocode/ide/terminal/links/links.dart';
@@ -349,6 +349,7 @@ void main() {
           os: os,
           userHome: windows ? r'C:\Home' : '/home',
           stat: fakeStat(() => files, os),
+          wslPath: fakeWslPath(),
         ),
       );
     }
@@ -665,15 +666,11 @@ void main() {
       }
 
       group('WSL', () {
-        test(
-          'Unix -> Windows /mnt/ style links',
-          skip: 'No WSL backend to ask for wslpath',
-          () async {
-            validResources = [_windowsFile(r'C:\foo\bar')];
-            files = validResources;
-            await assertLinksWithWrapped('/mnt/c/foo/bar', validResources[0]);
-          },
-        );
+        test('Unix -> Windows /mnt/ style links', () async {
+          validResources = [_windowsFile(r'C:\foo\bar')];
+          files = validResources;
+          await assertLinksWithWrapped('/mnt/c/foo/bar', validResources[0]);
+        });
 
         test(r'Windows -> Unix \\wsl$\ style links', () async {
           validResources = [_windowsFile(r'\\wsl$\Debian\home\foo\bar')];

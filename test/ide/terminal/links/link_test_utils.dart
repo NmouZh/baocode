@@ -99,6 +99,19 @@ TerminalLinkStat fakeStat(List<Uri>? Function() files, OperatingSystem os) {
   };
 }
 
+/// `wslpath -w` as the WSL tests need it: `/mnt/c/foo` → `C:\foo`, and
+/// anything that is no `/mnt/<letter>` path as it is. The app asks a
+/// backend's `wslpath` (see `TerminalWslPath`); the tests answer for it.
+TerminalWslPath fakeWslPath() => (path) async {
+  final match = RegExp(
+    r'^/mnt/([a-z])(/.*)?$',
+    caseSensitive: false,
+  ).firstMatch(path);
+  if (match == null) return path;
+  final rest = (match.group(2) ?? '').replaceAll('/', r'\');
+  return '${match.group(1)!.toUpperCase()}:$rest';
+};
+
 /// Upstream's `strings.format`: `{n}` is the n-th argument.
 String format(String value, List<Object?> args) {
   return value.replaceAllMapped(RegExp(r'\{(\d+)\}'), (match) {

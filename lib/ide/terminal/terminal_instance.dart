@@ -162,6 +162,7 @@ class TerminalBackend {
     this.detectProfiles = terminalProfiles,
     this.settings,
     this.linkStat,
+    this.wslPath,
     this._supported,
   });
 
@@ -179,6 +180,11 @@ class TerminalBackend {
 
   /// Null checks the disk ([TerminalFileLinkResolver]'s default).
   final TerminalLinkStat? linkStat;
+
+  /// Null asks the platform's `wslpath` ([TerminalFileLinkResolver]'s
+  /// default), which is the path it was given where there is no `wsl.exe`
+  /// to ask.
+  final TerminalWslPath? wslPath;
   final bool? _supported;
 
   /// Whether terminals run here ([ptySupported]): not on the web.
@@ -414,7 +420,10 @@ class TerminalInstance extends ChangeNotifier {
   /// words, as VS Code's link detectors find them.
   late final TerminalLinkDetection links = TerminalLinkDetection(
     xterm,
-    resolver: TerminalFileLinkResolver(stat: backend.linkStat),
+    resolver: TerminalFileLinkResolver(
+      stat: backend.linkStat,
+      wslPath: backend.wslPath,
+    ),
     initialCwd: cwd ?? root,
     workspaceFolders: [root],
     cwdForLine: (line) =>
