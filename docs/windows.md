@@ -91,6 +91,26 @@ Default client size 1024×760, minimum 400×540 — same numbers as
 | Starting CLI | `Process.start(..., runInShell: true)` for `.cmd` / `.bat` shims |
 | Login shell env | not used; the process already has the user's environment |
 
+## WSL
+
+A distribution is a terminal of its own. The New Terminal dropdown lists each
+one `wsl.exe -l -q` returns (`lib/ide/terminal/pty_io.dart`), named
+`<distribution> (WSL)` and started with `wsl.exe -d <distribution>`. Docker
+Desktop's own `docker-desktop` and `docker-desktop-data` are left out, so is a
+distribution the user's `terminal.integrated.profiles.windows` names, and
+nothing is listed on a Windows older than build 19041 — before `-d` existed a
+profile would start the default distribution instead of its own.
+
+A `/mnt/c/...` path a terminal prints resolves to the Windows file it names:
+the backend runs `wsl.exe -e wslpath -w` (`TerminalWslPath`, see
+`lib/ide/terminal/links/terminal_link_resolver_io.dart`). Nothing is converted
+without a `wsl.exe`, or when `wslpath` fails: the link resolves nowhere, as
+upstream's does. `\\wsl$\` and `\\wsl.localhost\` paths are left as they are.
+
+Upstream: `getWslProfiles` of `src/vs/platform/terminal/node/terminalProfiles.ts`,
+and the `unix-to-win` branch of `resolveLink` in
+`src/vs/workbench/contrib/terminalContrib/links/browser/terminalLinkResolver.ts`.
+
 ## Editors in the title bar
 
 `Editor.availableEditors` drops Xcode on Windows. Labels: File Explorer,

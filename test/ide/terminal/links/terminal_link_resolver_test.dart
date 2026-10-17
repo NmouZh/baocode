@@ -132,6 +132,146 @@ void main() {
     });
   });
 
+  group('WSL paths', () {
+    test('a /mnt/ link on Windows is converted before it is stat\'d', () async {
+      final asked = <String>[];
+      final stats = <String>[];
+      final resolver = TerminalFileLinkResolver(
+        os: OperatingSystem.windows,
+        userHome: r'C:\Home',
+        stat: (path) async {
+          stats.add(path);
+          return path == r'C:\foo\bar' ? false : null;
+        },
+        wslPath: (path) async {
+          asked.add(path);
+          return r'C:\foo\bar';
+        },
+      );
+      expect(await resolver.resolve('/mnt/c/foo/bar', ''), (
+        path: r'C:\foo\bar',
+        isDirectory: false,
+      ));
+      expect(asked, ['/mnt/c/foo/bar']);
+      expect(stats, [r'C:\foo\bar']);
+    });
+
+    test('the line and column suffix is stripped before the backend is '
+        'asked', () async {
+      final asked = <String>[];
+      final resolver = TerminalFileLinkResolver(
+        os: OperatingSystem.windows,
+        userHome: r'C:\Home',
+        stat: (path) async => null,
+        wslPath: (path) async {
+          asked.add(path);
+          return path;
+        },
+      );
+      await resolver.resolve('/mnt/c/foo/bar:12:3', '');
+      expect(asked, ['/mnt/c/foo/bar']);
+    });
+
+    test('what a backend cannot convert is stat\'d as it is, and so '
+        'resolves nowhere', () async {
+      final stats = <String>[];
+      final resolver = TerminalFileLinkResolver(
+        os: OperatingSystem.windows,
+        userHome: r'C:\Home',
+        stat: (path) async {
+          stats.add(path);
+          return null;
+        },
+        wslPath: (path) async => path,
+      );
+      expect(await resolver.resolve('/mnt/c/foo', ''), isNull);
+      expect(stats, ['/mnt/c/foo']);
+    });
+
+    test('another system asks no backend: /mnt/ is the path it is', () async {
+      final asked = <String>[];
+      final stats = <String>[];
+      final resolver = TerminalFileLinkResolver(
+        os: OperatingSystem.linux,
+        userHome: '/home',
+        stat: (path) async {
+          stats.add(path);
+          return null;
+        },
+        wslPath: (path) async {
+          asked.add(path);
+          return path;
+        },
+      );
+      await resolver.resolve('/mnt/c/foo/bar', '');
+      expect(asked, isEmpty);
+      expect(stats, ['/mnt/c/foo/bar']);
+    });
+
+    test('a /mnt/ path is a WSL mount by its first character, as upstream '
+        'reads it', () async {
+      final asked = <String>[];
+      final stats = <String>[];
+      final resolver = TerminalFileLinkResolver(
+        os: OperatingSystem.windows,
+        userHome: r'C:\Home',
+        stat: (path) async {
+          stats.add(path);
+          return null;
+        },
+        wslPath: (path) async {
+          asked.add(path);
+          return path;
+        },
+      );
+      // `data` is no drive, but upstream asks about `/mnt/` and one
+      // character: the backend is asked, and its answer is what is stat'd.
+      await resolver.resolve('/mnt/data/foo', '');
+      expect(asked, ['/mnt/data/foo']);
+      expect(stats, ['/mnt/data/foo']);
+    });
+
+    test('a /mnt/ path with no letter after it is not a WSL mount', () async {
+      final asked = <String>[];
+      final stats = <String>[];
+      final resolver = TerminalFileLinkResolver(
+        os: OperatingSystem.windows,
+        userHome: r'C:\Home',
+        stat: (path) async {
+          stats.add(path);
+          return null;
+        },
+        wslPath: (path) async {
+          asked.add(path);
+          return path;
+        },
+      );
+      await resolver.resolve('/mnt/9/foo', '');
+      expect(asked, isEmpty);
+      expect(stats, [r'\mnt\9\foo']);
+    });
+
+    test(r'a \\wsl$\ path is left as it is, not asked of a backend', () async {
+      final asked = <String>[];
+      final stats = <String>[];
+      final resolver = TerminalFileLinkResolver(
+        os: OperatingSystem.windows,
+        userHome: r'C:\Home',
+        stat: (path) async {
+          stats.add(path);
+          return null;
+        },
+        wslPath: (path) async {
+          asked.add(path);
+          return path;
+        },
+      );
+      await resolver.resolve(r'\\wsl$\Debian\home\foo', '');
+      expect(asked, isEmpty);
+      expect(stats, [r'\\wsl$\Debian\home\foo']);
+    });
+  });
+
   group('file URIs', () {
     test('round trip POSIX paths', () {
       for (final path in ['/foo/bar baz', '/a/100%/b', r'/f\oo/ba\r.txt']) {

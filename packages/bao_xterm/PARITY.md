@@ -69,7 +69,8 @@
 
 - 没有链接的快速选择（“Open Detected Link…”、“Open Last Link”）。
 - 悬停没有提示框：没有 “Follow link (cmd + click)”，没有按 `editor.multiCursorModifier` 换成 alt 的说法，也没有 “Follow link using forwarded port”。
-- 不支持远程终端：`vscode-remote` 路径不解析；WSL 的 `/mnt/` 路径不转换（上游要问后端的 `wslpath`）。`\\wsl$\` 路径是否原样保留，按终端进程的系统判断，上游按应用所在的系统。
+- 不支持远程终端：`vscode-remote` 路径不解析。`\\wsl$\` 路径是否原样保留，按终端进程的系统判断，上游按应用所在的系统。
+- WSL 的 `/mnt/` 路径交给后端的 `wslpath` 转换（`wsl.exe -e wslpath -w`，见 `../../lib/ide/terminal/links/terminal_link_resolver_io.dart`）。只有上游的 `unix-to-win`：`win-to-unix` 上游用在「在 Windows 目录里起一个 WSL 终端」上，那个目录由 `wsl.exe` 自己翻译。问不到（不是 Windows、没有 `wsl.exe`、`wslpath` 失败）就把原路径交出去，于是什么都找不到，和上游一样。
 - `terminal.integrated.enableFileLinks` 和 `wordSeparators` 只是构造参数，还没有设置项；`enableFileLinks` 没有 `notRemote` 这一档。
 - 不支持 OSC 8 超链接（xterm.js 的 `linkHandler`、`terminal.integrated.allowedLinkSchemes`），也没有扩展提供的链接。
 - 单词链接只算出搜索文本；上游会先在工作区里找，找到唯一的文件就直接打开，找不到才打开快速打开。
