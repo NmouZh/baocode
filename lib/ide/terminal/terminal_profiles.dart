@@ -49,6 +49,16 @@ class TerminalProfile {
 
   TerminalShell get shell => (executable: path, arguments: args);
 
+  /// Whether this profile starts a WSL distribution, as the ones the
+  /// platform lists from `wsl.exe -l -q` do: `wsl.exe -d <distribution>`
+  /// (upstream's `getWslProfiles`), told by the shell and the argument
+  /// rather than by what listed it, so a profile of the user's written the
+  /// same way is one too. Settings → Terminal lists them apart from the
+  /// system's own shells.
+  bool get isWslDistribution =>
+      p.windows.basename(path).toLowerCase() == 'wsl.exe' &&
+      args.any((arg) => arg.toLowerCase() == '-d');
+
   @override
   bool operator ==(Object other) =>
       other is TerminalProfile &&

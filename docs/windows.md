@@ -101,6 +101,13 @@ distribution the user's `terminal.integrated.profiles.windows` names, and
 nothing is listed on a Windows older than build 19041 — before `-d` existed a
 profile would start the default distribution instead of its own.
 
+Settings → Terminal lists them too, in a WSL group of their own, beside the
+Windows shells (`lib/settings/pages/terminal_page.dart`): picking one there
+writes `terminal.integrated.defaultProfile.windows`, which is what a new
+terminal starts — the setting the panel's own Select Default Profile writes.
+With no distribution found, the group is one line saying so; the platform's
+detection is the same one the dropdown runs.
+
 A `/mnt/c/...` path a terminal prints resolves to the Windows file it names:
 the backend runs `wsl.exe -e wslpath -w` (`TerminalWslPath`, see
 `lib/ide/terminal/links/terminal_link_resolver_io.dart`). Nothing is converted
