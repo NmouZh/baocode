@@ -7683,6 +7683,72 @@ abstract class AppLocalizations {
   /// **'detected'**
   String get termProfilesDetected;
 
+  /// No description provided for @termSettingsDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'The shell a new terminal starts in.'**
+  String get termSettingsDescription;
+
+  /// No description provided for @termSettingsSystemDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'System default'**
+  String get termSettingsSystemDefault;
+
+  /// No description provided for @termSettingsSystemGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Shells'**
+  String get termSettingsSystemGroup;
+
+  /// No description provided for @termSettingsWindowsGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Windows'**
+  String get termSettingsWindowsGroup;
+
+  /// No description provided for @termSettingsWslGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'WSL'**
+  String get termSettingsWslGroup;
+
+  /// No description provided for @termSettingsWslDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'A distribution's terminal runs in WSL: the project's folder is its own path under /mnt in the distribution.'**
+  String get termSettingsWslDescription;
+
+  /// No description provided for @termSettingsWslNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No WSL distribution was found'**
+  String get termSettingsWslNone;
+
+  /// No description provided for @termSettingsWslNoneDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Install one (wsl --install) and open this page again.'**
+  String get termSettingsWslNoneDetail;
+
+  /// No description provided for @termSettingsDetecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking for the shells on this system…'**
+  String get termSettingsDetecting;
+
+  /// No description provided for @termSettingsNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No shell was found on this system.'**
+  String get termSettingsNone;
+
+  /// No description provided for @termSettingsDesktopOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Terminals run in the desktop app.'**
+  String get termSettingsDesktopOnly;
+
   /// No description provided for @cmdTerminalNewWithProfile.
   ///
   /// In en, this message translates to:
@@ -12422,6 +12488,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Network'**
   String get settingsSectionNetwork;
+
+  /// No description provided for @settingsSectionTerminal.
+  ///
+  /// In en, this message translates to:
+  /// **'Terminal'**
+  String get settingsSectionTerminal;
+
+  /// No description provided for @settingsTerminalKeywords.
+  ///
+  /// In en, this message translates to:
+  /// **'terminal wsl shell bash powershell cmd distro ubuntu'**
+  String get settingsTerminalKeywords;
 
   /// No description provided for @settingsNetworkKeywords.
   ///

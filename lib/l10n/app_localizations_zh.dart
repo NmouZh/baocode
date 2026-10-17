@@ -4326,6 +4326,40 @@ class AppLocalizationsZh extends AppLocalizations {
   String get termProfilesDetected => '已检测到';
 
   @override
+  String get termSettingsDescription => '新终端启动时使用的 shell。';
+
+  @override
+  String get termSettingsSystemDefault => '跟随系统';
+
+  @override
+  String get termSettingsSystemGroup => 'Shell';
+
+  @override
+  String get termSettingsWindowsGroup => 'Windows';
+
+  @override
+  String get termSettingsWslGroup => 'WSL';
+
+  @override
+  String get termSettingsWslDescription =>
+      '发行版的终端在 WSL 中运行，项目的文件夹对应它在发行版里 /mnt 下的路径。';
+
+  @override
+  String get termSettingsWslNone => '没有检测到 WSL 发行版';
+
+  @override
+  String get termSettingsWslNoneDetail => '用 wsl --install 安装一个，再重新打开本页。';
+
+  @override
+  String get termSettingsDetecting => '正在查找本系统上的 shell…';
+
+  @override
+  String get termSettingsNone => '本系统上没有找到可用的 shell。';
+
+  @override
+  String get termSettingsDesktopOnly => '终端只能在桌面应用中使用。';
+
+  @override
   String get cmdTerminalNewWithProfile => '创建新终端(使用配置文件)';
 
   @override
@@ -7125,6 +7159,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsSectionNetwork => '网络';
+
+  @override
+  String get settingsSectionTerminal => '终端';
+
+  @override
+  String get settingsTerminalKeywords =>
+      '终端 wsl shell bash powershell 命令提示符 发行版 命令行';
 
   @override
   String get settingsNetworkKeywords => '代理 网络 proxy clash vpn 梯子';

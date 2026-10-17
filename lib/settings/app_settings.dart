@@ -37,6 +37,7 @@ import 'pages/notifications_page.dart';
 import 'pages/settings_widgets.dart' show SettingsPage;
 import 'pages/stash_hotkey_field.dart';
 import 'pages/stash_page.dart';
+import 'pages/terminal_page.dart';
 import 'pages/updates_page.dart';
 import 'settings_dialog.dart';
 import 'user_settings.dart';
@@ -151,6 +152,8 @@ class AppSettings {
           providers: ModelProviders.current,
           workspace: workspace,
         );
+      case SettingsSection.terminal:
+        return TerminalSettingsPage(settings: files?.settings);
       case SettingsSection.network:
         return NetworkSettingsPage(settings: files?.settings);
       case SettingsSection.mobile:

@@ -4645,6 +4645,42 @@ class AppLocalizationsEn extends AppLocalizations {
   String get termProfilesDetected => 'detected';
 
   @override
+  String get termSettingsDescription => 'The shell a new terminal starts in.';
+
+  @override
+  String get termSettingsSystemDefault => 'System default';
+
+  @override
+  String get termSettingsSystemGroup => 'Shells';
+
+  @override
+  String get termSettingsWindowsGroup => 'Windows';
+
+  @override
+  String get termSettingsWslGroup => 'WSL';
+
+  @override
+  String get termSettingsWslDescription =>
+      'A distribution\'s terminal runs in WSL: the project\'s folder is its own path under /mnt in the distribution.';
+
+  @override
+  String get termSettingsWslNone => 'No WSL distribution was found';
+
+  @override
+  String get termSettingsWslNoneDetail =>
+      'Install one (wsl --install) and open this page again.';
+
+  @override
+  String get termSettingsDetecting =>
+      'Looking for the shells on this system…';
+
+  @override
+  String get termSettingsNone => 'No shell was found on this system.';
+
+  @override
+  String get termSettingsDesktopOnly => 'Terminals run in the desktop app.';
+
+  @override
   String get cmdTerminalNewWithProfile => 'Create New Terminal (With Profile)';
 
   @override
@@ -7587,6 +7623,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsSectionNetwork => 'Network';
+
+  @override
+  String get settingsSectionTerminal => 'Terminal';
+
+  @override
+  String get settingsTerminalKeywords =>
+      'terminal wsl shell bash powershell cmd distro ubuntu';
 
   @override
   String get settingsNetworkKeywords => 'proxy http https clash vpn network';

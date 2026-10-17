@@ -293,6 +293,41 @@ void main() {
       );
       expect(windowsWslExePath(const {}), r'C:\Windows\System32\wsl.exe');
     });
+
+    test('is told by its shell and its -d argument, whichever listed it', () {
+      expect(
+        wsl()
+            .where((profile) => profile.isWslDistribution)
+            .map((profile) => profile.name),
+        ['Ubuntu (WSL)', 'Debian (WSL)'],
+      );
+      // A profile of the user's written the same way, and one that names
+      // wsl.exe for something else.
+      expect(
+        const TerminalProfile(
+          name: 'My WSL',
+          path: wslExe,
+          args: ['-d', 'Ubuntu', '--cd', '/'],
+        ).isWslDistribution,
+        isTrue,
+      );
+      expect(
+        const TerminalProfile(
+          name: 'WSL bash',
+          path: wslExe,
+          args: ['-e', 'bash'],
+        ).isWslDistribution,
+        isFalse,
+      );
+      expect(
+        const TerminalProfile(
+          name: 'PowerShell',
+          path: r'C:\Program Files\PowerShell\7\pwsh.exe',
+          args: ['-d'],
+        ).isWslDistribution,
+        isFalse,
+      );
+    });
   });
 
   group('wslDistrosFromOutput', () {
